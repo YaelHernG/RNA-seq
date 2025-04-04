@@ -17,7 +17,7 @@ Los factores de transcripción artificiales (ATFs) representan una herramienta p
 
 [Reporte final](https://yaelherng.github.io/Reporte_Final/)
 
-## Pipeline
+## Pipeline:
 1. Descarga de los datos, mediante ENA browser [download_all_rawData](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/download_all_rawData.sge)
 2. Análisis de calidad de los datos crudos [qc1](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/qc1.sge)
 3. Trimming mediante la herramienta de Trimmomatic [trimming](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/trimming.sh)
