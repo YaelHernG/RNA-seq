@@ -5,11 +5,11 @@
 - Ariadna Angélica Badía Zamudio
 - Yael Daniel Hernández González
 
-Fecha: 4 de abril del 2025
+**Fecha: 4 de abril del 2025**
 
-Materia: Bioinformatica
+**Materia: Bioinformatica**
 
-4to Semestre
+**4to Semestre**
 
 ## Resumen:
 
@@ -19,4 +19,17 @@ Los factores de transcripción artificiales (ATFs) representan una herramienta p
 
 ## Pipeline
 1. Descarga de los datos, mediante ENA browser [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/download_all_rawData.sge)
-2. 
+2. Análisis de calidad de los datos crudos [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/qc1.sge)
+3. Trimming mediante la herramienta de Trimmomatic [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/trimming.sh)
+4. Análisis de calidad de los datos trimmeados [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/qc2.sh) [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/qc2.sge)
+5. Indexacion del genoma de referencia con STAR [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/STAR_index.sh)
+6. Alineamiento y Conteo de los transcriptomas al genoma de referencia, mediante STAR [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/align.sh)
+7. Importar de datos a R (archivos de cuentas y metadata) y creación de una matriz de cuentas con todos los transcriptomas [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/data.R)
+8. Creacion de archivo *dds* con *DESeq2*
+9. Análisis de Expresion Diferencial Genica (DEG)
+10. Normalizacion de los datos
+11. Deteccion de Batch effect mediante PCA
+12. Obtener los resultados de los contrastes de DEG
+    [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/DEG_analysis.R)
+13. VIsualizacion de los datos, mediante Heatmap y Volcanoplot [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/Visualizacion.R)
+14. Analisis de Terminos funcionales (GO terms) [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/GOterms_analysis.R)
