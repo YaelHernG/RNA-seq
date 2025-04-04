@@ -18,5 +18,5 @@ Los factores de transcripción artificiales (ATFs) representan una herramienta p
 [Reporte final](https://yaelherng.github.io/Reporte_Final/)
 
 ## Pipeline
-1. Descarga de los datos, mediante ENA browser [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/PRJNA1198988_download.sh)
+1. Descarga de los datos, mediante ENA browser [script](https://github.com/YaelHernG/RNA-seq/blob/main/Scripts/download_all_rawData.sge)
 2. 
