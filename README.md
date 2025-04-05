@@ -1,4 +1,4 @@
-## Analisis de Expresion Diferencial en Transcriptomas 
+## Activación Específica de Interferón-γ por el Factor de Transcripción Artificial ATF3 en Células Jurkat: Análisis de RNA-seq y Enriquecimiento Funcional
 
 ## Integrantes:
 - Paola Albarrán Godoy
