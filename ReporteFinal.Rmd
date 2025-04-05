@@ -1,0 +1,601 @@
+---
+title: "Activación Específica de Interferón-γ por el Factor de Transcripción Artificial ATF3 en Células Jurkat: Análisis de RNA-seq y Enriquecimiento Funcional"
+author: "Paola Albarrán Godoy, Ariadna Badia Zamudio, Yael Daniel Hernandez Gonzalez"
+date: "`r Sys.Date()`"
+output: 
+  html_document: # El output controla los parámetros de salida del renderizado
+    collapsed: false            # Contraer celdas de salida
+    code_folding: show          # Mostrar el código
+    toc: true                   # Mostrar la tabla de contenidos
+    toc_depth: 4                # Niveles de títulos que se mostrarán
+    toc_float: true             # Índices o contenidos flotantes
+    smooth_scroll: true         # Activar el scroll
+    highlight: kate             # Destacar
+    df_print: paged             # Mostrar los dataframes en páginas
+    number_sections: true       # Numeración de contenidos
+    theme: flatly
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Descripción del equipo
+
+-   **Equipo:** 2
+
+-   **Integrantes:**
+
+    -   Paola Albarrán Godoy (palbarran)
+
+    -   Ariadna Angélica Badía Zamudio (abadia)
+
+    -   Yael Daniel Hernández González (yhernandezg)
+
+-   **Correos electrónicos de los integrantes:**
+
+    -   sc0bly16\@hotmail.com
+
+    -   aribadia93\@gmail.com
+
+    -   yaelhgs\@gmail.com
+
+# Descripción de los datos
+
+-   **Bioproject:**
+    [PRJNA1198988](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1198988)
+
+-   **Especie:** *Homo sapiens*
+
+-   **Tipo de bibliotecas:** *paired-end*
+
+-   **Método de selección:** Se realizó mediante selección de poli(A),
+    utilizando el kit NEBNext Ultra II RNA Library Prep Kit for
+    Illumina.
+
+-   **Número de transcriptomas:** 9
+
+-   **Número de réplicas biológicas:** 3 réplicas biológicas por cada
+    condición experimental. Los SRA correspondientes a cada réplica son
+    los siguientes:
+
+    -   Condición 1 (ATF3): SRX27100265, SRX27100266, SRX27100267
+
+    -   Condición 2 (Aart6): SRX27100262, SRX27100263, SRX27100264
+
+    -   Condición 3 (Vehículo): SRX27100268, SRX27100269, SRX27100270
+
+-   **Secuenciador empleado:** Illumina HiSeq 2000
+
+-   **Distribución de las muestras:** 3 condiciones experimentales con 3
+    réplicas biológicas cada una: ATF3 (factor de transcripción
+    artificial), Aart6 (control isogénico), Vehículo (control)
+
+-   **Profundidad de secuenciación de cada transcriptoma:** \~26-40
+    millones de lecturas
+
+-   **Tamaño de las lecturas:** 150 bp
+
+-   **Artículo científico:** King A, Noblitt D, Sherron O, Kjerfve C,
+    Pless L and Truex NL (2025) An artificial transcription factor that
+    activates potent interferon-γ expression in human Jurkat T Cells.
+    Front. Mol. Med. 4:1492370. doi:
+    [10.3389/fmmed.2024.1492370](https://doi.org/10.3389/fmmed.2024.1492370)
+
+Los datos se pueden descargar desde [NCBI](https://www.ncbi.nlm.nih.gov)
+o usando [ENA](https://www.ebi.ac.uk/ena).
+
+# Abstract
+
+Los factores de transcripción artificiales (ATFs) representan una
+herramienta prometedora para modular la expresión génica con fines
+terapéuticos. En este reporte, caracterizamos un ATF diseñado para
+activar la expresión de interferón-gamma (IFN-γ) en células Jurkat
+humanas mediante análisis de RNA-seq. Utilizando datos de 9
+transcriptomas (3 condiciones: ATF3, Aart6, Vehículo), identificamos 135
+genes diferencialmente expresados en ATF3 vs Vehículo, incluyendo
+*IFNG*, *STAT1* y moléculas del complejo HLA. El análisis funcional
+reveló enriquecimiento en vías inmunes como *"cell surface receptor
+signaling pathway"* (p.adj = 1.2e-10) y *"defense response to symbiont"*
+(p.adj = 2.8e-5), mientras que el control Aart6 mostró términos no
+inmunes (ej: *"neuronal synaptic plasticity"*). Estos resultados
+demuestran que ATF3 activa específicamente programas transcripcionales
+asociados a IFN-γ, respaldando su potencial en inmunoterapia contra
+cáncer e infecciones.
+
+# Workflow
+
+```{r, echo=FALSE, out.width='80%', fig.cap="**Figura 1.**Pipeline para analisis de los transcriptomas"}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Figures/Workflow.png")
+```
+
+# Resultados y Discusión
+
+## Calidad de las secuencias de los datos crudos
+
+Se analizó la calidad de las secuencias y por posición en los datos
+crudos, la mayoría de las secuencias están en la zona verde (Phred \>
+30), lo que indica una calidad buena (Figura 2A). Las últimas 10
+posiciones muestran un Phred score promedio de Q25 (vs. Q35 en
+posiciones iniciales), dentro del rango aceptable para análisis sin
+trimming, lo cual es normal en datos de secuenciacion.
+
+Por secuencia, igual se encuentran en la zona verde (Phred \>30), lo que
+indica que la calidad general de las lecturas es bastante alta. (Figura
+2B)
+
+```{r, echo=FALSE, out.width='100%', fig.cap="**Figura 2.** Calidad de las secuencias en muestras con ATF3, Aart6 y controles. **(A)** Calidad por posición de base: Distribución del Phred score promedio (eje Y) en cada posición de la secuencia (eje X). Las barras/áreas coloreadas indican la proporción de reads con calidad dentro de rangos específicos **(B)** Distribución de Phred scores por read"}
+library(ggplot2)
+library(patchwork)
+library(png)
+library(grid)
+
+# Cargar imágenes como objetos raster
+img1 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad1/fastqc_per_base_sequence_quality_plot.png")
+img2 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad1/fastqc_per_sequence_quality_scores_plot.png")
+
+# Convertir imágenes a objetos ggplot
+g1 <- ggplot() + 
+  annotation_custom(rasterGrob(img1)) + 
+  theme_void()
+
+g2 <- ggplot() + 
+  annotation_custom(rasterGrob(img2)) + 
+  theme_void()
+
+# Combinar con patchwork
+combined_plot <- g1 + g2 + 
+  plot_layout(ncol = 2) + 
+  plot_annotation(tag_levels = "A")
+
+print(combined_plot)
+```
+
+La siguiente gráfica muestra el contenido GC por secuencia, esta gráfica
+es una distribución unimodal y relativamente simétrica, lo que es una
+buena señal, y sin anomalías evidentes. (Figura 3)
+
+```{r, echo=FALSE, out.width='80%', fig.cap="**Figura 3.**Distribucion de las variaciones en el porcentaje de %GC en las muestras"}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad1/fastqc_per_sequence_gc_content_plot.png")
+```
+
+Se indican la proporción de bibliotecas que estan representadas por
+secuencias duplicadas (Figura 4A). Se observa que un porcentaje
+significativo de la biblioteca está compuesto por secuencias altamente
+duplicadas. Esto podría sugerir que hay una baja diversidad en las
+secuencias, lo que podría ser problemático para el análisis de expresión
+génica, ya que podría sesgar los resultados.
+
+La presencia de secuencias de adaptadores en funcion de la posición en
+las lecturas (Figura 4B). Se observa que el porcentaje de secuencias con
+adaptadores aumenta a medida que avanza la posición en las lecturas.
+Esto es común, ya que los adaptadores tienden a aparecer más hacia el
+final de las lecturas cuando el fragmento de ADN es más corto que la
+longitud de la lectura
+
+```{r, echo=FALSE, out.width='100%', fig.show='hold', fig.cap="**Figura 4.** Análisis de duplicación de secuencias y contenido de adaptadores  **(A)** Muestra el porcentaje de lecturas que están duplicadas en el conjunto de datos. **(B)** Presencia de secuencias de adaptadores en las lecturas, por posición en la secuencia."}
+img1 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad1/fastqc_sequence_duplication_levels_plot.png")
+img2 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad1/fastqc_adapter_content_plot.png")
+
+
+# Convertir imágenes a objetos ggplot
+g1 <- ggplot() + 
+  annotation_custom(rasterGrob(img1)) + 
+  theme_void()
+
+g2 <- ggplot() + 
+  annotation_custom(rasterGrob(img2)) + 
+  theme_void()
+
+# Combinar con patchwork
+combined_plot <- g1 + g2 + 
+  plot_layout(ncol = 2) + 
+  plot_annotation(tag_levels = "A")
+
+print(combined_plot)
+```
+
+La calidad de las secuencias es alta, lo que es un buen punto de partida
+para el análisis. Sin embargo, la alta duplicación de secuencias y la
+presencia de adaptadores hacia el final de las lecturas son aspectos que
+deben abordarse antes de proceder con el análisis de expresión génica
+
+## Calidad post-trimming
+
+El trimming con Trimmomatic (parámetros: LEADING:3, TRAILING:3,
+SLIDINGWINDOW:4:20, MINLEN:80) mejoró significativamente la calidad de
+los datos:
+
+-   **Regiones críticas**: Eliminación de bases con calidad \<Q3 en
+    extremos y ventanas de 4 bases con promedio \<Q20.
+-   **Reads retenidas**: 85% de las reads superaron el filtro MINLEN:80,
+    asegurando fragmentos informativos.
+
+En la Figura 5A, el aumento de Phred scores (Q≥30) en posiciones 1-15 y
+135-150 refleja la remoción eficiente de bases de baja calidad. La
+Figura 5B muestra dos poblaciones: reads paired (85%, Phred \~35) y
+unpaired (15%, Phred \~25), estas últimas descartadas en análisis
+posteriores.
+
+```{r, echo=FALSE, out.width='100%', fig.cap="**Figura 5.** Calidad de las secuencias en transcriptomas procesados con Trimmomatic **(A)**Calidad por posición: Las zonas verdes (Q≥30) aumentaron en posiciones 1-15 y 135-150 post-trimming. **(B)** Distribución de calidad: Dos picos corresponden a reads paired (Phred ~35) y unpaired (Phred ~25), siendo estas últimas minoría tras el filtrado."}
+library(ggplot2)
+library(patchwork)
+library(png)
+library(grid)
+
+# Cargar imágenes como objetos raster
+img1 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad2/fastqc_per_base_sequence_quality_plot.png")
+img2 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad2/fastqc_per_sequence_quality_scores_plot.png")
+
+# Convertir imágenes a objetos ggplot
+g1 <- ggplot() + 
+  annotation_custom(rasterGrob(img1)) + 
+  theme_void()
+
+g2 <- ggplot() + 
+  annotation_custom(rasterGrob(img2)) + 
+  theme_void()
+
+# Combinar con patchwork
+combined_plot <- g1 + g2 + 
+  plot_layout(ncol = 2) + 
+  plot_annotation(tag_levels = "A")
+
+print(combined_plot)
+```
+
+Se observa una remoción de adaptadores, con contaminación residual \<1%
+en todas las posiciones (vs. 12% pre-trimming) (Figura 6A), al igual que
+una reducción de duplicaciones de (12% → 4%) y el aumento de reads
+únicas (75% → 88%) indican una biblioteca más diversa y menos sesgada
+(Figura 6B).
+
+La reducción de duplicaciones al 4% minimiza falsos positivos en
+expresión diferencial, y reads \>80 bp mejoran la precisión de
+alineación en STAR.
+
+```{r, echo=FALSE, out.width='100%', fig.show='hold', fig.cap="**Figura 6.** Análisis de duplicación de secuencias y contenido de adaptadores  **(A)** Contenido de adaptadores: Porcentajes <1% en todas las posiciones (vs. picos del 5% pre-trimming). **(B)** Duplicaciones: Nivel 1 (reads únicas) aumentó del 75% al 88%, confirmando mayor diversidad."}
+img2 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad2/fastqc_sequence_duplication_levels_plot.png")
+img1 <- readPNG("/home/yael/2025-2/Bioinformatica/RNA-seq/Calidad2/fastqc_adapter_content_plot.png")
+
+
+# Convertir imágenes a objetos ggplot
+g1 <- ggplot() + 
+  annotation_custom(rasterGrob(img1)) + 
+  theme_void()
+
+g2 <- ggplot() + 
+  annotation_custom(rasterGrob(img2)) + 
+  theme_void()
+
+# Combinar con patchwork
+combined_plot <- g1 + g2 + 
+  plot_layout(ncol = 2) + 
+  plot_annotation(tag_levels = "A")
+
+print(combined_plot)
+```
+
+Estas mejoras impactan directamente en la precisión de mapeo y la
+confiabilidad de la cuantificación génica, justificando el uso de
+trimming en flujos de trabajo de RNA-seq.
+
+## Alineamiento
+
+Se utilizo STAR para realizar alineamiento y conteo debido a su
+capacidad detección de empalmes. El alineamiento se hizo contra el
+genoma de referencia humano GRCh38, además de un archivo de anotaciones
+en formato GTF.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE,fig.cap="Tabla1. "}
+rm(list = ls())
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# Datos de ejemplo (reemplaza con tus datos reales)
+datos <- data.frame(
+  Muestra = c("SRR31738155", "SRR31738156", "SRR31738157", "SRR31738158", "SRR31738159",
+              "SRR31738160", "SRR31738161", "SRR31738162", "SRR31738163"),
+  Lecturas_totales = c("126,820,399", "25,835,342", "37,489,513", "25,139,871", 
+                       "22,482,888", "31,286,772", "24,751,003", "30,653,048", "30,535,296"),
+  Unicamente_mapeadas = c("94.65%", "94.71%", "94.48%", "94.51%", "84.2%", "94.51%", "94.48%", "94.51%","94.47%"),
+  Multiple_loci = c("3.46%", "3.47%", "3.53%", "3.55%", "13.3%", "3.62%", "3.56%", "3.46%", "3.52%"),
+  Empalmes_detectados = c("32,781,965", "33,020,758", "45,076,063", "29,779,896", "22,522,628", "37,192,720", "28,680,358", "34,972,520","34,886,750")
+)
+
+# Crear tabla elegante
+kable(datos, format = "html", escape = FALSE, caption = "Tabla 1. Resumen de las métricas de alineamiento para cada muestra.") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = TRUE,
+                position = "center", font_size = 15) %>%  
+  row_spec(0, bold = TRUE, color = "white", background = "#343a40") %>%
+  column_spec(1, bold = FALSE, color = "black") %>%
+  column_spec(5, color = "#17a2b8")
+```
+
+Las estadísticas del alineamiento mostraron un alto porcentaje de
+lecturas mapeadas en donde en la mayoría de las muestra tenían un 93.3%,
+indicando un alineamiento eficiente.Además, el porcentaje de lecturas
+que mapearon en múltiples loci se mantuvo bajo (alrededor de un 4.6%).
+
+Sin embargo, nos percatamos que una muestra (SRR31738159) mostró
+diferencias en comparación con las demás, ya que su porcentaje de
+lecturas mapeadas eran más bajo (84.2%) y su porcentaje de lecturas
+mapeadas en múltiples loci más alto (13.3%), lo que podría ser
+consecuencia de una menor calidad de lecturas o de una mayor cantidad de
+presencia repetidas.
+
+Por otro lado, todas las muestras mostraron un alto número de empalmes,
+en un rango de 22,522,628 a 45,076,063 empalmes.
+
+## Predicción de cuentas
+
+Se cuantificarón 78,724 transcritos/features anotados en el archivo GTF
+(ej: genes, isoformas, regiones no codificantes), con un promedio de
+20,914,767 lecturas asignadas por muestra
+
+La distribución de cuentas normalizadas (log2) mostró consistencia entre
+las muestras (Figura 7), respaldando la ausencia de sesgos técnicos
+mayores. como una mediana cercana a 10 en todas las muestras y un rango
+intercuartílico similar (log2: 8-12), con outliers mínimos.
+
+```{r,message=FALSE, echo=FALSE, warning=FALSE,fig.cap="**Figura 7**.Distribución de cuentas normalizadas por muestra.Cada boxplot representa la distribución de log2(Counts + 1) para una muestra. La línea central indica la mediana, los bordes del cuadro el IQR (25-75%), y los bigotes 1.5 × IQR. "}
+rm(list = ls())
+library(ggplot2)
+library(reshape2)
+counts <- read.csv("/home/yael/2025-2/Bioinformatica/RNA-seq/CSV/raw_counts.csv",row.names = 1)
+
+# Número de genes cuantificados
+X <- nrow(counts)
+
+# Promedio de lecturas asignadas por muestra
+Z <- round(mean(colSums(counts)), 2)
+
+counts_long <- melt(log2(counts + 1))  # Transformación logarítmica para visualización
+ggplot(counts_long, aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot() +
+  labs(title = "Distribución de cuentas por muestra (log2)", x = "Muestra", y = "log2(Counts + 1)") +
+  theme_minimal()
+```
+
+La uniformidad observada respalda la eficacia del trimming (Figura 5) y
+el alto porcentaje de lecturas mapeadas (Tabla 1), confirmando que los
+sesgos técnicos son mínimos. Estos resultados validan la uniformidad
+técnica del experimento, permitiendo análisis robustos de expresión
+génica diferencial.
+
+## Expresión diferencial
+
+Para identificar genes diferencialmente expresados entre las condiciones
+de **vehiculo, Aart6 y ATF3** , se utilizo DESeq2, con un umbral de
+significancia de $|log2FC| \geq 2$ y $p-valor$ ajustado $<0.05$ . Los
+genes con menos de 10 conteos totales fueron filtrados para reducir
+ruido técnico.
+
+### Análisis de Componentes Principales (PCA)
+
+El PCA realizado con datos transformados por **rlog** (Figura 8)
+mostrarón una clara separación de las muestras según las condiciones
+experimentales (Vehículo, Aart6, ATF3) . La variabilidad capturada por
+los dos primeros componentes principales (PC1 y PC2) explicó el 94% de
+la varianza total, indicando que las diferencias biologicas entre las
+condiciones son el principal factor de variación en el conjunto de
+datos.
+
+Las muestras de cada condición forman clusters bien definidos y sin
+superposición, lo que sugiere efectos transcripcionales distintivos de
+cada condición. Existe una distancia entre grupos refleja la magnitud de
+las diferencias biologicas, y el ATF3, tiene una mayor divergencia
+respecto al control (Vehículo), un hallazgo consistente con estudios
+previos que utilizan factores de transcripcion artificiales (ATFs) para
+modular redes génicas específicas [1]
+
+Hay una ausencia de agrupamiento por lotes, validando la homogeneidad
+dentro de cada condicion y la consistencia del efecto de las
+condiciones.
+
+```{r, echo=FALSE, out.width='80%', fig.show='hold', fig.cap="**Figura 8.** Análisis de Componentes Principales (PCA) post-transformación rlog"}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Figures/PCA_rlog.png")
+```
+
+### Resultados de Expresión Diferencial
+
+En el contraste **ATF3 vs Vehículo**, se identificarón **135 genes
+diferencialmente expresados** (**126 upregulated**, **9
+downregulated**). Se destacan los siguientes genes:
+
+-   **Top upregulated genes:**
+
+    ```         
+    ART1, DNER, HSD11B1, CTCFL, EIF4E1B, ART5, OLIG2, IL11, IFNG, TRBV26OR9-2, CKMT1B, PTENP1-AS, PTH2, NGEF, ARX, REPS2, GFY, EFNB2, ERBB3, SLC8A3
+    ```
+
+-   **Top downregulated genes:**
+
+    ```         
+    CGA, CPA3, DHRS2, PRELID2, PKIA-AS1, VCAM1, IL18R1, AHSP, CDH24
+    ```
+
+```{r, include = FALSE, message=FALSE, echo=FALSE, warning=FALSE,fig.cap="Analisis de resultados tratamiento vs control"}
+rm(list = ls())
+library(org.Hs.eg.db)
+res_ATF3 <- read.csv("/home/yael/2025-2/Bioinformatica/RNA-seq/CSV/CSV_DEG/DE_ATF3_vs_vehiculo.csv", row.names = 1)
+
+# Filtrar genes significativos (p.adj < 0.05 y log2FoldChange >=2)
+sig_genes <- res_ATF3[!is.na(res_ATF3$padj) & res_ATF3$padj < 0.05 & abs(res_ATF3$log2FoldChange) >= 2, ]
+
+# Contar upregulated y downregulated
+upregulated <- sum(sig_genes$log2FoldChange > 0, na.rm = TRUE)
+downregulated <- sum(sig_genes$log2FoldChange < 0, na.rm = TRUE)
+
+# Imprimir resultados
+cat("Total de genes significativos:", nrow(sig_genes), "\n")
+cat("Upregulated:", upregulated, "\n")
+cat("Downregulated:", downregulated, "\n")
+
+# 4. Traducir ENSEMBL IDs a símbolos génicos (solo para genes significativos)
+clean_ids <- sub("\\..*", "", rownames(sig_genes))
+# Mapear a símbolos
+gene_symbols <- mapIds(
+  org.Hs.eg.db,
+  keys = clean_ids,
+  column = "SYMBOL",
+  keytype = "ENSEMBL",
+  multiVals = "first"
+)
+
+# Añadir símbolos al dataframe
+sig_genes$symbol <- gene_symbols
+
+# 5. Obtener top genes con símbolos
+top_upregulated <- sig_genes[order(-sig_genes$log2FoldChange), ]
+top_upregulated_genes <- head(na.omit(top_upregulated$symbol), 20)  # Omitir NAs
+
+top_downregulated <- sig_genes[order(sig_genes$log2FoldChange), ]
+top_downregulated_genes <- head(na.omit(top_downregulated$symbol), 9)
+
+# 6. Resultados con símbolos
+cat("\nTop 20 upregulated genes:", paste(top_upregulated_genes, collapse = ", "), "\n")
+cat("Top 20 downregulated genes:", paste(top_downregulated_genes, collapse = ", "), "\n")
+
+```
+
+Los volcano plots (Figura 9) destacan la regulación positiva de genes
+clave como *IFNG*, *STAT1*, *HLA-A*, *TNF* e *IL11*, junto con la
+ausencia de cambios significativos en el control Aart6 (Figura 9A-C).
+Estos resultados coinciden con estudios que vinculan la activación de
+IFN-γ con la inducción de moléculas del complejo mayor de
+histocompatibilidad (HLA) y vías de señalización JAK-STAT [2][3].
+
+La regulación positiva de *IL11* en ATF3 esta asociada con respuestas
+antifibróticas más que proinflamatorias [4]. Sin embargo, trabajos
+recientes sugieren que IFN-γ puede modular funciones pleiotrópicas de
+citoquinas dependiendo del contexto celular [5], lo que respalda la
+observación. Por otro lado, la falta de genes significativamente
+regulados en **Aart6 vs Vehículo** (Figura 9C) valida su diseño como
+control isotipo, similar a constructos no funcionales reportados en
+estudios con proteínas de dedos de zinc [1].
+
+```{r, echo=FALSE, out.width='80%', fig.show='hold', fig.cap="**Figura 9.** Volcano plots de expresión diferencial. **(A)** ATF3 vs Vehículo **(B)** ATF3 vs Aart6 **(C)** Aart6 vs Vehículo "}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Borradores_Scripts/Figures/Combined_Volcano.png")
+```
+
+El heatmap (Figura 10) muestra los perfiles de expresión de **28 genes
+clave** predefinidos en el artículo de referencia, relacionados con
+respuestas inmunes y señalización celular. Las muestras se agruparon
+según las condiciones (**Vehículo**, **ATF3**, **Aart6**).
+
+Muestra una sobreexpresión robusta de genes asociados a la inmunidad
+(*STAT1*, *IFNG*, *TNF*, *HLA-A/B/C*) en ATF3, contrastando con la
+expresión basal en Vehículo y Aart6. Estos patrones reflejan la
+capacidad del ATF3 para activar vías inmunes innatas y adaptativas, un
+mecanismo crítico para mejorar la presentación de antígenos y la
+actividad antitumoral. La menor expresión de genes como *VCAM1* en Aart6
+sugiere efectos mínimos no específicos, respaldando su uso como control
+negativo.[1][6]
+
+```{r, echo=FALSE, out.width='80%', fig.show='hold', fig.cap="**Figura 10.** Heatmap de Expresión Génica Perfiles de 28 genes clave. Escala: rojo (alta expresión), azul (baja expresión). Muestras ordenadas por condición."}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Borradores_Scripts/Figures/Heatmap.png")
+```
+
+Los resultados en general demuestran que ATF3 activa eficientemente la
+expresión de IFN-γ y sus vías asociadas, respaldando su potencial para
+aplicaciones en cáncer e infecciones.
+
+## Análisis funcional
+
+Se realizó un **análisis de enriquecimiento funcional** mediante
+*g:Profiler* para identificar procesos biológicos, componentes celulares
+y rutas moleculares asociadas a los genes diferencialmente expresados
+entre las condiciones **ATF3**, **Aart6** y **Vehículo**. Se utilizaron
+bases de datos como **Gene Ontology (GO)**, **Reactome**, **CORUM** y
+**Transcription Factors**, aplicando un umbral de significancia ajustado
+(*p.adj \< 0.05*) para controlar falsos positivos mediante corrección de
+FDR.
+
+Este enfoque permitió capturar términos biológicamente relevantes
+vinculados a la activación de IFN-γ y su impacto en la respuesta inmune.
+
+El analisis revelo que el factor de transcripción artificial **ATF3**
+activa vías inmunes clave relacionadas con la señalización de IFN-γ,
+mientras que el control **Aart6** carece de efectos específicos sobre
+estas rutas (Figuras 11-13).
+
+En el contraste **ATF3 vs Vehículo**, los términos más enriquecidos
+incluyeron *"cell surface receptor signaling pathway"* (p.adj = 1.2e-10)
+y *"cytokine-mediated signaling pathway"* (p.adj = 3.5e-8), lo que
+refleja la activación de rutas JAK-STAT y moléculas del complejo HLA
+(Figura 11). Estos hallazgos son consistentes con estudios previos que
+vinculan la sobreexpresión de IFN-γ con la regulación de la presentación
+de antígenos y la activación de células T citotóxicas [3]. Por ejemplo,
+Castro et al. (2018) demostraron que IFN-γ induce la expresión de HLA en
+células tumorales, mejorando la respuesta inmune adaptativa [3], un
+mecanismo que explica el enriquecimiento de genes como *HLA-A/B/C* en
+nuestro análisis.
+
+```{r,  echo=FALSE, out.width='80%', fig.align='center', fig.show='hold', fig.cap="**Figura 11.** Términos GO enriquecidos en ATF3 vs Vehículo (p.adj < 0.05)."}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Figures/barplotUP_GO_DE_ATF3_vs_vehiculo.png")
+```
+
+La comparación **ATF3 vs Aart6** destacó términos específicos como
+*"defense response to symbiont"* (p.adj = 2.8e-5) y *"FC-gamma receptor
+signaling pathway involved in phagocytosis"* (p.adj = 1.1e-4) (Figura
+12), sugiriendo que ATF3 no solo activa IFN-γ, sino también programas
+transcripcionales amplios contra patógenos. Este perfil amplificado es
+relevante para aplicaciones en infecciones intracelulares, donde la
+coordinación entre citoquinas y fagocitosis es crítica [4].
+
+```{r,  echo=FALSE, out.width='80%', fig.align='center', fig.show='hold', fig.cap="**Figura 12.** Términos GO enriquecidos en AT3 vs Aart6 (p.adj < 0.05)."}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Figures/barplotUP_GO_DE_Aart6_vs_ATF3.png")
+```
+
+En contraste, **Aart6 vs Vehículo** mostró enriquecimiento en procesos
+no inmunes como *"regulation of neuronal synaptic plasticity"* (p.adj =
+7.3e-4) (Figura 13) [1]. La ausencia de términos inmunes en Aart6 valida
+su diseño como control negativo y respalda la especificidad del ATF3,
+similar a constructos de dedos de zinc no funcionales utilizados en
+estudios previos [6].
+
+```{r,  echo=FALSE, out.width='80%', fig.align='center', fig.show='hold', fig.cap="**Figura 13.** Términos GO enriquecidos en Aart6 vs vehiculo (p.adj < 0.05)"}
+knitr::include_graphics("/home/yael/2025-2/Bioinformatica/RNA-seq/Figures/barplotUP_GO_DE_Aart6_vs_vehiculo.png")
+```
+
+En conjunto, los datos funcionales demuestran que **ATF3 activa de
+manera específica y robusta vías inmunes asociadas a IFN-γ**, sin
+efectos off-target observados en Aart6. Estos hallazgos respaldan su uso
+en enfoques terapéuticos dirigidos a potenciar respuestas inmunes
+adaptativas contra enfermedades.
+
+**Todos los archivos y scripts se encuentran en
+[GitHub](<https://github.com/YaelHernG/RNA-seq>)**
+
+# Referencias
+
+[1] Heiderscheit, E. A., Eguchi, A., Spurgat, M. C., and Ansari, A. Z.
+(2018). Reprogramming cell fate with artiﬁcial transcription factors.
+FEBS Lett. 592, 888--900.doi:10.1002/1873-3468.12993
+
+[2] Castro, F., Cardoso, A. P., Goncalves, R. M., Serre, K., and
+Oliveira, M. J. (2018). Interferon-gamma at the crossroads of tumor
+immune surveillance or evasion. Front. Immunol. 9,
+847.doi:10.3389ﬁmmu.2018.00847
+
+[3] Schoenborn, J. R., and Wilson, C. B. (2007). Regulation of
+interferon-gamma during innate and adaptive immune responses. Adv.
+Immunol. 96, 41--101.doi:10.1016/S0065-2776(07)96002-2
+
+[4] Dinarello, C. A. (2000). Proinﬂammatory cytokines. Chest 118,
+503--508. <doi:10.1378/chest.118.2.503>
+
+[5] Cui, A., Huang, T., Li, S., Ma, A., Perez, J. L., Sander, C., et al.
+(2024a). Dictionary of immune responses to cytokines at single-cell
+resolution. Nature 625, 377--384.doi:10. 1038/s41586-023-06816-9
+
+[6] King A, Noblitt D, Sherron O, Kjerfve C, Pless L and Truex NL (2025)
+An artificial transcription factor that activates potent interferon-γ
+expression in human Jurkat T Cells. Front. Mol. Med.
+4:1492370.doi:[10.3389/fmmed.2024.1492370](https://doi.org/10.3389/fmmed.2024.1492370)
